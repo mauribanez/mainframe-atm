@@ -1,36 +1,10 @@
 package bo.edu.ucb.sis213;
 
-import java.util.Scanner;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.Scanner;
 
 public class App {
-    private static int usuarioId;
-    private static double saldo;
-    private static int pinActual;
-    private static String nombreUsuario;
-
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 3306;
-    private static final String USER = "root";
-    private static final String PASSWORD = "123456";
-    private static final String DATABASE = "atm";
-
-    public static Connection getConnection() throws SQLException {
-        String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s", HOST, PORT, DATABASE);
-        try {
-            // Asegúrate de tener el driver de MySQL agregado en tu proyecto
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            throw new SQLException("MySQL Driver not found.", e);
-        }
-
-        return DriverManager.getConnection(jdbcUrl, USER, PASSWORD);
-    }
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -40,20 +14,19 @@ public class App {
 
         Connection connection = null;
         try {
-            connection = getConnection(); // Reemplaza esto con tu conexión real
+            connection = Database.getConnection();
         } catch (SQLException ex) {
-            System.err.println("No se puede conectar a Base de Datos");
+            System.err.println("No se puede conectar a la Base de Datos");
             ex.printStackTrace();
             System.exit(1);
         }
-        
 
         while (intentos > 0) {
             System.out.print("Ingrese su PIN de 4 dígitos: ");
             int pinIngresado = scanner.nextInt();
-            if (validarPIN(connection, pinIngresado)) {
-                pinActual = pinIngresado;
-                mostrarMenu();
+            if (UsuarioDAO.validarPIN(connection, pinIngresado)) {
+                Usuario usuario = UsuarioDAO.obtenerUsuarioPorPIN(connection, pinIngresado);
+                mostrarMenu(usuario, connection);
                 break;
             } else {
                 intentos--;
@@ -67,39 +40,10 @@ public class App {
         }
     }
 
-    public static boolean validarPIN(Connection connection, int pin) {
-        String query = "SELECT id, saldo, nombre FROM usuarios WHERE pin = ?";
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setInt(1, pin);
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            if (resultSet.next()) {
-                usuarioId = resultSet.getInt("id");
-                saldo = resultSet.getDouble("saldo");
-                nombreUsuario = resultSet.getString("nombre");
-                mostrarMenu();
-                return true;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    public static void mostrarMenu() {
+    public static void mostrarMenu(Usuario usuario, Connection connection) {
         Scanner scanner = new Scanner(System.in);
-        Connection connection = null;
 
-        try {
-        connection = getConnection(); // Establecer la conexión
-    } catch (SQLException ex) {
-        System.err.println("No se puede conectar a Base de Datos");
-        ex.printStackTrace();
-        System.exit(1);
-    }
-    System.out.println("\nBienvenido, " + nombreUsuario + ", al Menú Principal:");
-
+        System.out.println("\nBienvenido, " + usuario.getNombre() + ", al Menú Principal:");
 
         while (true) {
             System.out.println("\nMenú Principal:");
@@ -113,16 +57,16 @@ public class App {
 
             switch (opcion) {
                 case 1:
-                    consultarSaldo();
+                    UsuarioBO.consultarSaldo(usuario);
                     break;
                 case 2:
-                    realizarDeposito(connection);
+                    UsuarioBO.realizarDeposito(connection, usuario);
                     break;
                 case 3:
-                    realizarRetiro(connection);
+                    UsuarioBO.realizarRetiro(connection, usuario);
                     break;
                 case 4:
-                    cambiarPIN(connection);
+                    UsuarioBO.cambiarPIN(connection, usuario);
                     break;
                 case 5:
                     System.out.println("Gracias por usar el cajero. ¡Hasta luego!");
@@ -133,105 +77,4 @@ public class App {
             }
         }
     }
-
-    public static void consultarSaldo() {
-        System.out.println("Su saldo actual es: $" + saldo);
-    }
-
-    public static void registrarOperacion(Connection connection, String tipoOperacion, double cantidad) {
-        String insertQuery = "INSERT INTO historico (usuario_id, tipo_operacion, cantidad) VALUES (?, ?, ?)";
-        try (PreparedStatement insertStatement = connection.prepareStatement(insertQuery)) {
-            insertStatement.setInt(1, usuarioId);
-            insertStatement.setString(2, tipoOperacion);
-            insertStatement.setDouble(3, cantidad);
-            insertStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            System.out.println("Error al registrar la operación en la tabla historico.");
-        }
-    }
-    
-    public static void realizarDeposito(Connection connection) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Ingrese la cantidad a depositar: $");
-        double cantidad = scanner.nextDouble();
-    
-        if (cantidad <= 0) {
-            System.out.println("Cantidad no válida.");
-        } else {
-            try {
-                saldo += cantidad;
-                actualizarSaldoEnBaseDeDatos(connection, saldo);
-                registrarOperacion(connection, "DEPOSITO", cantidad); // Registrar la operación en historico
-                System.out.println("Depósito realizado con éxito. Su nuevo saldo es: $" + saldo);
-            } catch (SQLException e) {
-                e.printStackTrace();
-                System.out.println("Error al actualizar el saldo en la base de datos.");
-            }
-        }
-    }
-    
-    public static void realizarRetiro(Connection connection) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Ingrese la cantidad a retirar: $");
-        double cantidad = scanner.nextDouble();
-    
-        if (cantidad <= 0) {
-            System.out.println("Cantidad no válida.");
-        } else if (cantidad > saldo) {
-            System.out.println("Saldo insuficiente.");
-        } else {
-            try {
-                saldo -= cantidad;
-                actualizarSaldoEnBaseDeDatos(connection, saldo);
-                registrarOperacion(connection, "RETIRO", cantidad); // Registrar la operación en historico
-                System.out.println("Retiro realizado con éxito. Su nuevo saldo es: $" + saldo);
-            } catch (SQLException e) {
-                e.printStackTrace();
-                System.out.println("Error al actualizar el saldo en la base de datos.");
-            }
-        }
-    }
-public static void actualizarSaldoEnBaseDeDatos(Connection connection, double nuevoSaldo) throws SQLException {
-    String query = "UPDATE usuarios SET saldo = ? WHERE id = ?";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-        preparedStatement.setDouble(1, nuevoSaldo);
-        preparedStatement.setInt(2, usuarioId);
-        preparedStatement.executeUpdate();
-    }
-}
-
-public static void cambiarPIN(Connection connection) {
-    Scanner scanner = new Scanner(System.in);
-    System.out.print("Ingrese su PIN actual: ");
-    int pinIngresado = scanner.nextInt();
-
-    if (pinIngresado == pinActual) {
-        System.out.print("Ingrese su nuevo PIN: ");
-        int nuevoPin = scanner.nextInt();
-        System.out.print("Confirme su nuevo PIN: ");
-        int confirmacionPin = scanner.nextInt();
-
-        if (nuevoPin == confirmacionPin) {
-            try {
-                String updateQuery = "UPDATE usuarios SET pin = ? WHERE id = ?";
-                try (PreparedStatement updateStatement = connection.prepareStatement(updateQuery)) {
-                    updateStatement.setInt(1, nuevoPin);
-                    updateStatement.setInt(2, usuarioId);
-                    updateStatement.executeUpdate();
-                }
-                pinActual = nuevoPin;
-                System.out.println("PIN actualizado con éxito.");
-            } catch (SQLException e) {
-                e.printStackTrace();
-                System.out.println("Error al actualizar el PIN en la base de datos.");
-            }
-        } else {
-            System.out.println("Los PINs no coinciden.");
-        }
-    } else {
-        System.out.println("PIN incorrecto.");
-    }
-}
-
 }
