@@ -1,4 +1,4 @@
-package bo.edu.ucb.sis213;
+package bo.edu.ucb.sis213.persistencia;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

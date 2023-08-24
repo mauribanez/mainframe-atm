@@ -1,30 +1,27 @@
-package bo.edu.ucb.sis213;
+package bo.edu.ucb.sis213.logica_negocio;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Scanner;
 
 public class OperacionesBancariasService {
-    String query = "SELECT id, saldo, nombre FROM usuarios WHERE pin = ?";
-
-
-    public static void consultarSaldo(Connection connection) {
-        saldo = resultSet.getDouble("saldo");
+    public static void consultarSaldo(Connection connection, double saldo) {
         System.out.println("Su saldo actual es: $" + saldo);
     }
 
-    public static void realizarDeposito(Connection connection) {
+    public static void realizarDeposito(Connection connection, double saldo) {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Ingrese la cantidad a depositar: $");
         double cantidad = scanner.nextDouble();
-    
+
         if (cantidad <= 0) {
             System.out.println("Cantidad no válida.");
         } else {
             try {
                 saldo += cantidad;
-                actualizarSaldoEnBaseDeDatos(connection, saldo);
-                registrarOperacion(connection, "DEPOSITO", cantidad); // Registrar la operación en historico
+                actualizarSaldoEnBaseDeDatos(connection, saldo, usuarioId);
+                registrarOperacion(connection, usuarioId, "DEPOSITO", cantidad);
                 System.out.println("Depósito realizado con éxito. Su nuevo saldo es: $" + saldo);
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -109,4 +106,7 @@ public class OperacionesBancariasService {
             System.out.println("Error al registrar la operación en la tabla historico.");
         }
     }
+    private static double saldo;
+    private static int usuarioId;
+    private static int pinActual;
 }

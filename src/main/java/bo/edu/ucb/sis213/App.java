@@ -24,8 +24,8 @@ public class App {
         while (intentos > 0) {
             System.out.print("Ingrese su PIN de 4 dígitos: ");
             int pinIngresado = scanner.nextInt();
-            if (UsuarioDAO.validarPIN(connection, pinIngresado)) {
-                Usuario usuario = UsuarioDAO.obtenerUsuarioPorPIN(connection, pinIngresado);
+            if (Dao.validarPIN(connection, pinIngresado)) {
+                Usuario usuario = Dao.obtenerUsuarioPorPIN(connection, pinIngresado);
                 mostrarMenu(usuario, connection);
                 break;
             } else {
@@ -57,16 +57,16 @@ public class App {
 
             switch (opcion) {
                 case 1:
-                    UsuarioBO.consultarSaldo(usuario);
+                    Dao.consultarSaldo(usuario);
                     break;
                 case 2:
-                    UsuarioBO.realizarDeposito(connection, usuario);
+                    Dao.realizarDeposito(connection, usuario);
                     break;
                 case 3:
-                    UsuarioBO.realizarRetiro(connection, usuario);
+                    Dao.realizarRetiro(connection, usuario);
                     break;
                 case 4:
-                    UsuarioBO.cambiarPIN(connection, usuario);
+                    Dao.cambiarPIN(connection, usuario);
                     break;
                 case 5:
                     System.out.println("Gracias por usar el cajero. ¡Hasta luego!");

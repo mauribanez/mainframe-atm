@@ -1,4 +1,4 @@
-package bo.edu.ucb.sis213;
+import bo.edu.ucb.sis213.logica_negocio.OperacionesBancariasService;
 
 import java.sql.Connection;
 import java.util.Scanner;
